@@ -29,6 +29,8 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
+    final todoProvider = Provider.of<TaskProvider>(context);
+
     return AdvancedDrawer(
       backdropColor: Colors.white,
       controller: _advancedDrawerController,
@@ -145,7 +147,7 @@ class _HomeState extends State<Home> {
                 elevation: 0,
                 flexibleSpace: FlexibleSpaceBar(
                   background: PreferredSize(
-                    preferredSize: Size.fromHeight(200),
+                    preferredSize: const Size.fromHeight(200),
                     child: Container(
                       decoration: const BoxDecoration(
                           image: DecorationImage(
@@ -154,7 +156,7 @@ class _HomeState extends State<Home> {
                               fit: BoxFit.cover)),
                       child: Row(
                         children: [
-                          Container(
+                          SizedBox(
                             width: getWidth(context) * 0.6,
                             child: SafeArea(
                               child: Column(

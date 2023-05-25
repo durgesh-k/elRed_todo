@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:todo_app/models/todo.dart';
+import 'package:todo_app/utils/constants.dart';
 import 'package:todo_app/widgets/toast.dart';
 
 class TaskProvider extends ChangeNotifier {
@@ -11,7 +12,7 @@ class TaskProvider extends ChangeNotifier {
   List<Todo> get todos => _todos;
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  User? user = FirebaseAuth.instance.currentUser;
+  //User? user = FirebaseAuth.instance.currentUser;
   late CollectionReference _todoCollection;
 
   int businessTodoCount = 0;
@@ -20,18 +21,16 @@ class TaskProvider extends ChangeNotifier {
 
   // Initiate with todos
   TaskProvider() {
-    _todoCollection =
-        _firestore.collection('Tasks').doc(user!.uid).collection('Todos');
+    _todoCollection = _firestore
+        .collection('Tasks')
+        .doc(FirebaseAuth.instance.currentUser!.uid)
+        .collection('Todos');
     getTodos();
   }
 
   //this fetches all todos from firebase
 
   Future<void> getTodos() async {
-    final DateTime now = DateTime.now();
-    final DateTime startOfDay = DateTime(now.year, now.month, now.day);
-    final DateTime endOfDay = startOfDay.add(const Duration(days: 1));
-
     isLoading = true;
     notifyListeners();
 
@@ -43,7 +42,9 @@ class TaskProvider extends ChangeNotifier {
           .get();
       _todos = querySnapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        updateParameters(data['type'], data['isCompleted']);
+        //updateParameters(data['type'], data['isCompleted']);
+
+        count();
 
         return Todo(
           id: doc.id,
@@ -90,7 +91,9 @@ class TaskProvider extends ChangeNotifier {
       showToast('New task successfully added');
 
       isLoading = false;
-      updateParameters(thisTodo['type'], false);
+      //updateParameters(thisTodo['type'], false);
+
+      count();
 
       notifyListeners();
     } catch (e) {
@@ -101,7 +104,7 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
-  //this updates a todo when a user edits it 
+  //this updates a todo when a user edits it
 
   Future<void> updateTodo(Todo updatedTodo) async {
     isLoading = true;
@@ -122,6 +125,7 @@ class TaskProvider extends ChangeNotifier {
         _todos[index] = updatedTodo;
       }
       //updateParameters(updatedTodo.type, updatedTodo.isCompleted);
+      count();
 
       isLoading = false;
       notifyListeners();
@@ -144,6 +148,8 @@ class TaskProvider extends ChangeNotifier {
       await _todoCollection.doc(todo.id).update({'isCompleted': isCompleted});
       todo.isCompleted = isCompleted;
 
+      count();
+
       isLoading = false;
       notifyListeners();
       showToast('Task complete');
@@ -153,7 +159,7 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
-  //this deletes a todo 
+  //this deletes a todo
 
   Future<void> deleteTodo(Todo todo) async {
     isLoading = true;
@@ -162,6 +168,8 @@ class TaskProvider extends ChangeNotifier {
     try {
       await _todoCollection.doc(todo.id).delete();
       _todos.remove(todo);
+
+      count();
 
       isLoading = false;
       notifyListeners();
@@ -174,17 +182,50 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
-  //this updates the required parameters
+  //these streams and functions are used to update business, personal and isCompleted values required to show on th UI
 
-  void updateParameters(String typeValue, bool isCompletedValue) {
-    if (typeValue == 'Business') {
-      businessTodoCount += 1;
-    } else {
-      personalTodoCount += 1;
-    }
-    if (isCompletedValue == true) {
-      completedTodoCount += 1;
-    }
-    notifyListeners();
+  Stream<int> countCompletedTasks() {
+    return _todoCollection
+        .where('timestamp',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('timestamp', isLessThan: Timestamp.fromDate(endOfDay))
+        .where('isCompleted', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) => snapshot.size);
+  }
+
+  Stream<int> countBusinessTasks() {
+    return _todoCollection
+        .where('timestamp',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('timestamp', isLessThan: Timestamp.fromDate(endOfDay))
+        .where('type', isEqualTo: 'Business')
+        .snapshots()
+        .map((snapshot) => snapshot.size);
+  }
+
+  Stream<int> countPersonalTasks() {
+    return _todoCollection
+        .where('timestamp',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('timestamp', isLessThan: Timestamp.fromDate(endOfDay))
+        .where('type', isEqualTo: 'Personal')
+        .snapshots()
+        .map((snapshot) => snapshot.size);
+  }
+
+  void count() {
+    countCompletedTasks().listen((count) {
+      completedTodoCount = count;
+      notifyListeners();
+    });
+    countBusinessTasks().listen((count) {
+      businessTodoCount = count;
+      notifyListeners();
+    });
+    countPersonalTasks().listen((count) {
+      personalTodoCount = count;
+      notifyListeners();
+    });
   }
 }

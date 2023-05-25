@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:page_transition/page_transition.dart';
+import 'package:provider/provider.dart';
+import 'package:todo_app/main.dart';
 import 'package:todo_app/pages/onboard.dart';
+import 'package:todo_app/providers/task_provider.dart';
 import 'package:todo_app/widgets/toast.dart';
 
 import '../pages/home.dart';
@@ -100,13 +103,19 @@ class AuthProvider extends ChangeNotifier {
     loader = false;
     notifyListeners();
 
-    Navigator.pushAndRemoveUntil(
-        context,
-        PageTransition(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.bounceInOut,
-            type: PageTransitionType.rightToLeft,
-            child: const Onboard()),
-        (route) => false);
+    hotRestartApp();
   }
+}
+
+Key appKey = UniqueKey();
+
+void hotRestartApp() {
+  appKey = UniqueKey();
+
+  runApp(
+    KeyedSubtree(
+      key: appKey,
+      child: MyApp(),
+    ),
+  );
 }

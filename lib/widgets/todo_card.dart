@@ -57,7 +57,7 @@ class _TodoCardState extends State<TodoCard> {
                   title: Row(
                     children: [
                       widget.todo!.isCompleted
-                          ? Icon(Icons.check, color: Colors.green)
+                          ? const Icon(Icons.check, color: Colors.green)
                           : Container(),
                       Text(
                         widget.todo!.title,
